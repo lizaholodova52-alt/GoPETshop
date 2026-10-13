@@ -7,6 +7,7 @@ import (
 	"PETshop/internal/handlers/product"
 	"PETshop/internal/handlers/user"
 	"PETshop/internal/handlers/order"
+	"PETshop/internal/handlers/checkout"
 	"PETshop/internal/lib/logger"
 	"PETshop/internal/storage/postgres"
 	"log/slog"
@@ -56,6 +57,7 @@ func main() {
 	userHandler := user.New(log, storage)
 	orderHandler := order.New(log, storage)
 	orderItemHandler := order.NewItem(log, storage)
+	checkoutHandler := checkout.New(log, storage)
 	router.Get("/health", handlers.StatusHandler)
 	router.Get("/products", productHandler.GetAllProducts)
 	router.Get("/products/{id}", productHandler.GetProductByID)
@@ -70,6 +72,7 @@ func main() {
 	router.Post("/products", productHandler.CreateProduct)
 	router.Post("/orders", orderHandler.CreateOrder)
 	router.Post("/orders/{id}/items", orderItemHandler.AddOrderItem)
+	router.Post("/checkout", checkoutHandler.PlaceOrder)
 
 	// Settings and started server
 	srv := &http.Server{

@@ -64,27 +64,10 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order.TotalPrice = 0
-
 	orderID, err := h.storage.CreateOrder(r.Context(), order)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			log.Error("customer not found",
-				slog.Any("error", err),
-				slog.Int("customer_id", order.CustomerID),
-			)
-
-			render.Status(r, http.StatusNotFound)
-			render.JSON(w, r, map[string]string{
-				"error":   "Not found",
-				"message": "Customer not found",
-			})
-			return
-		}
-
 		log.Error("failed to create order", slog.Any("error", err))
-
-		render.Status(r, http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 		render.JSON(w, r, map[string]string{
 			"error":   "Internal server error",
 			"message": "Failed to create order",
@@ -122,7 +105,7 @@ func (h *Handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, map[string]string{
 			"error":   "Bad request",
-			"message": "Product ID is required",
+			"message": "Order ID is required",
 		})
 		return
 	}

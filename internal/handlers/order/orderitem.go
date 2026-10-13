@@ -64,6 +64,7 @@ func (h *HandlerItem) AddOrderItem(w http.ResponseWriter, r *http.Request) {
 	var orderItem models.OrderItem
 	if err := render.DecodeJSON(r.Body, &orderItem); err != nil {
 		log.Error("failed to decode request body", slog.Any("error", err))
+
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, map[string]string{
 			"error":   "Bad request",
@@ -75,11 +76,6 @@ func (h *HandlerItem) AddOrderItem(w http.ResponseWriter, r *http.Request) {
 	orderItem.OrderID = orderID
 
 	if orderItem.ProductID <= 0 || orderItem.Quantity <= 0 {
-		log.Error("invalid order item",
-			slog.Int("order_id", orderItem.OrderID),
-			slog.Int("product_id", orderItem.ProductID),
-			slog.Int("quantity", orderItem.Quantity),
-		)
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, map[string]string{
 			"error":   "Bad request",
@@ -99,6 +95,7 @@ func (h *HandlerItem) AddOrderItem(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Error("failed to add order item", slog.Any("error", err))
+
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, map[string]string{
 			"error":   "Internal server error",
@@ -108,7 +105,6 @@ func (h *HandlerItem) AddOrderItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("Order item added successfully",
-		slog.String("url", r.URL.String()),
 		slog.Int("order_id", orderItem.OrderID),
 		slog.Int("product_id", orderItem.ProductID),
 	)

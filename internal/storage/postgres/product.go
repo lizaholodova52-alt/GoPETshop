@@ -28,7 +28,6 @@ func (s *Storage) GetAllProducts(ctx context.Context) ([]models.Product, error) 
 		products = append(products, p)
 	}
 
-	// Проверяем ошибки итерации
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
