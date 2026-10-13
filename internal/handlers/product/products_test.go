@@ -1,20 +1,21 @@
 package product
 
 import (
+	"PETshop/internal/models"
+	"PETshop/internal/storage"
 	"context"
 	"errors"
-	"PETshop/internal/models"
+	"github.com/go-chi/chi"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"testing"
 	"strings"
-	"github.com/go-chi/chi"
+	"testing"
 )
 
-// Get Product - Ready
+
 func TestGetAllProducts_Success(t *testing.T) {
-	// Мокаем storage — он вернёт один продукт.
+
 	mock := &ProductsMock{
 		GetAllProductsFunc: func(ctx context.Context) ([]models.Product, error) {
 			return []models.Product{
@@ -23,39 +24,80 @@ func TestGetAllProducts_Success(t *testing.T) {
 		},
 	}
 
-	// Создаем HTTP-запрос GET /products
 	req := httptest.NewRequest(http.MethodGet, "/products", nil)
 	w := httptest.NewRecorder()
 
-	// Создаем хендлер с мок-хранилищем
 	handler := New(slog.Default(), mock)
 
-	// Вызываем метод GetAllProducts, который является http.HandlerFunc
 	handler.GetAllProducts(w, req)
 
-	// Проверяем HTTP-код
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", w.Code)
 	}
 }
 func TestGetAllProducts_Error(t *testing.T) {
-	// Мокаем storage — он будет возвращать ошибку
 	mock := &ProductsMock{
 		GetAllProductsFunc: func(ctx context.Context) ([]models.Product, error) {
 			return nil, errors.New("DB error")
 		},
 	}
 
-	// Создаем запрос
 	req := httptest.NewRequest(http.MethodGet, "/products", nil)
 	w := httptest.NewRecorder()
 
 	handler := New(slog.Default(), mock)
 	handler.GetAllProducts(w, req)
-
-	// Ожидаем HTTP 500
+	
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestGetProductByID_Success(t *testing.T) {
+	mock := &ProductsMock{
+		GetProductByIDFunc: func(ctx context.Context, id int) (models.Product, error) {
+			return models.Product{ID: id, Name: "Dog Food"}, nil
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/products/1", nil)
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("id", "1")
+
+	req = req.WithContext(
+		context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx),
+	)
+
+	w := httptest.NewRecorder()
+	handler := New(slog.Default(), mock)
+	handler.GetProductByID(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+}
+
+func TestGetProductByID_NotFound(t *testing.T) {
+	mock := &ProductsMock{
+		GetProductByIDFunc: func(ctx context.Context, id int) (models.Product, error) {
+			return models.Product{}, storage.ErrNotFound
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/products/999", nil)
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("id", "999")
+
+	req = req.WithContext(
+		context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx),
+	)
+
+	w := httptest.NewRecorder()
+	handler := New(slog.Default(), mock)
+	handler.GetProductByID(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", w.Code)
 	}
 }
 
@@ -86,8 +128,8 @@ func TestCreateProduct_Success(t *testing.T) {
 
 	handler.CreateProduct(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", w.Code)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", w.Code)
 	}
 }
 
@@ -206,7 +248,7 @@ func TestUpdateProduct_Fail(t *testing.T) {
 		"stock": 10
 	}`
 
-	req := httptest.NewRequest(http.MethodPut,"/products/1", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, "/products/1", strings.NewReader(body))
 
 	routeCtx := chi.NewRouteContext()
 	routeCtx.URLParams.Add("id", "1")

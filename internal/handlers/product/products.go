@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"PETshop/internal/models"
+	"PETshop/internal/storage"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -16,6 +18,7 @@ import (
 
 type Products interface {
 	GetAllProducts(ctx context.Context) ([]models.Product, error)
+	GetProductByID(ctx context.Context, id int) (models.Product, error)
 	CreateProduct(ctx context.Context, product models.Product) (int, error)
 	DeleteProduct(ctx context.Context, id int) error
 	UpdateProduct(ctx context.Context, product models.Product) error
@@ -59,6 +62,75 @@ func (h *Handler) GetAllProducts(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, items)
 }
 
+func (h *Handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
+	const fn = "handlers.products.GetProductByID"
+	log := h.log.With(
+		slog.String("fn", fn),
+		slog.String("request_id", middleware.GetReqID(r.Context())),
+	)
+
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		log.Error("empty id")
+		w.WriteHeader(http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{
+			"error":   "Bad request",
+			"message": "Product ID is required",
+		})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Error("invalid id format", slog.Any("error", err), slog.String("id", idStr))
+		w.WriteHeader(http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{
+			"error":   "Bad request",
+			"message": "Product ID must be a number",
+		})
+		return
+	}
+
+	if id <= 0 {
+		log.Error("invalid product id", slog.Int("id", id))
+
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, map[string]string{
+			"error":   "Bad request",
+			"message": "Product ID must be greater than zero",
+		})
+		return
+	}
+
+	product, err := h.storage.GetProductByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			log.Error("product not found", slog.Any("error", err))
+			w.WriteHeader(http.StatusNotFound)
+			render.JSON(w, r, map[string]string{
+				"error":   "Not found",
+				"message": "Product not found",
+			})
+			return
+		}
+
+		log.Error("failed to get product", slog.Any("error", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		render.JSON(w, r, map[string]string{
+			"error":   "Internal server error",
+			"message": "Failed to get product",
+		})
+		return
+	}
+
+	log.Info("Retrieved product successfully",
+		slog.String("url", r.URL.String()),
+		slog.Int("id", product.ID),
+	)
+
+	render.JSON(w, r, product)
+}
+
 func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	const fn = "handlers.products.CreateProduct"
 
@@ -80,7 +152,6 @@ func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Валидация
 	if product.Name == "" {
 		log.Error("product name is empty")
 		w.WriteHeader(http.StatusBadRequest)
@@ -111,7 +182,6 @@ func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем продукт
 	productID, err := h.storage.CreateProduct(r.Context(), product)
 	if err != nil {
 		log.Error("failed to create product", slog.Any("error", err))
@@ -129,8 +199,8 @@ func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		slog.String("url", r.URL.String()),
 	)
 
-	// Возвращаем созданный продукт с его ID
 	product.ID = productID
+	render.Status(r, http.StatusCreated)
 	render.JSON(w, r, map[string]interface{}{
 		"status":  "Product created successfully",
 		"id":      productID,
@@ -159,7 +229,7 @@ func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Конвертируем ID в int
+	
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Error("invalid id format", slog.Any("error", err), slog.String("id", idStr))
@@ -171,9 +241,9 @@ func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Удаляем продукт
+	
 	if err := h.storage.DeleteProduct(r.Context(), id); err != nil {
-		// Проверяем, является ли ошибка "не найдено" с помощью strings.Contains
+		
 		if strings.Contains(strings.ToLower(err.Error()), "not found") ||
 			strings.Contains(strings.ToLower(err.Error()), "no rows") ||
 			strings.Contains(strings.ToLower(err.Error()), "rows affected: 0") {
@@ -218,7 +288,7 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("Updating product", slog.String("url", r.URL.String()))
 
-	// Получаем ID из URL
+	
 	idStr := chi.URLParam(r, "id")
 	if idStr == "" {
 		log.Error("empty id in URL")
@@ -230,7 +300,7 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Конвертируем ID в int
+	
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Error("invalid id format", slog.Any("error", err), slog.String("id", idStr))
@@ -242,7 +312,7 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Декодируем тело запроса
+	
 	var product models.Product
 	if err := render.DecodeJSON(r.Body, &product); err != nil {
 		log.Error("failed to decode request body", slog.Any("error", err))
@@ -254,10 +324,10 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Устанавливаем ID из URL (переопределяем ID из тела, если он там был)
+	
 	product.ID = id
 
-	// Валидация
+	
 	if product.Name == "" {
 		log.Error("product name is empty")
 		w.WriteHeader(http.StatusBadRequest)
@@ -288,9 +358,8 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Обновляем продукт
+	
 	if err := h.storage.UpdateProduct(r.Context(), product); err != nil {
-		// Проверяем, является ли ошибка "не найдено" с помощью strings.Contains
 		if strings.Contains(strings.ToLower(err.Error()), "not found") ||
 			strings.Contains(strings.ToLower(err.Error()), "no rows") ||
 			strings.Contains(strings.ToLower(err.Error()), "rows affected: 0") {
@@ -319,7 +388,7 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		slog.String("url", r.URL.String()),
 	)
 
-	// Возвращаем обновленный продукт
+	
 	render.JSON(w, r, map[string]interface{}{
 		"status":  "Product updated successfully",
 		"id":      id,
