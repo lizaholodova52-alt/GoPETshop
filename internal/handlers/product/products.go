@@ -1,11 +1,11 @@
 package product
 
 import (
-	"context"
-	"fmt"
 	"PETshop/internal/models"
 	"PETshop/internal/storage"
+	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -91,22 +91,10 @@ func (h *Handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if id <= 0 {
-		log.Error("invalid product id", slog.Int("id", id))
-
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, map[string]string{
-			"error":   "Bad request",
-			"message": "Product ID must be greater than zero",
-		})
-		return
-	}
-
 	product, err := h.storage.GetProductByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			log.Error("product not found", slog.Any("error", err))
-			w.WriteHeader(http.StatusNotFound)
+			render.Status(r, http.StatusNotFound)
 			render.JSON(w, r, map[string]string{
 				"error":   "Not found",
 				"message": "Product not found",
@@ -115,7 +103,7 @@ func (h *Handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Error("failed to get product", slog.Any("error", err))
-		w.WriteHeader(http.StatusInternalServerError)
+		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, map[string]string{
 			"error":   "Internal server error",
 			"message": "Failed to get product",
@@ -229,7 +217,6 @@ func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Error("invalid id format", slog.Any("error", err), slog.String("id", idStr))
@@ -241,9 +228,7 @@ func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	if err := h.storage.DeleteProduct(r.Context(), id); err != nil {
-		
 		if strings.Contains(strings.ToLower(err.Error()), "not found") ||
 			strings.Contains(strings.ToLower(err.Error()), "no rows") ||
 			strings.Contains(strings.ToLower(err.Error()), "rows affected: 0") {
@@ -288,7 +273,6 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("Updating product", slog.String("url", r.URL.String()))
 
-	
 	idStr := chi.URLParam(r, "id")
 	if idStr == "" {
 		log.Error("empty id in URL")
@@ -300,7 +284,6 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Error("invalid id format", slog.Any("error", err), slog.String("id", idStr))
@@ -312,7 +295,6 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	var product models.Product
 	if err := render.DecodeJSON(r.Body, &product); err != nil {
 		log.Error("failed to decode request body", slog.Any("error", err))
@@ -324,10 +306,8 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	product.ID = id
 
-	
 	if product.Name == "" {
 		log.Error("product name is empty")
 		w.WriteHeader(http.StatusBadRequest)
@@ -358,7 +338,6 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	if err := h.storage.UpdateProduct(r.Context(), product); err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "not found") ||
 			strings.Contains(strings.ToLower(err.Error()), "no rows") ||
@@ -388,7 +367,6 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		slog.String("url", r.URL.String()),
 	)
 
-	
 	render.JSON(w, r, map[string]interface{}{
 		"status":  "Product updated successfully",
 		"id":      id,

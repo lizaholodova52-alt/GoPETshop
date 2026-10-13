@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/mail"
+	"strings"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -35,7 +36,10 @@ func New(logger *slog.Logger, storage Users) *Handler {
 func (h *Handler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	const fn = "handlers.user.GetAllUsers"
 
-	log := h.log.With(slog.String("fn", fn), slog.String("request_id", middleware.GetReqID(r.Context())))
+	log := h.log.With(
+		slog.String("fn", fn),
+		slog.String("request_id", middleware.GetReqID(r.Context())),
+	)
 
 	users, err := h.storage.GetAllUsers(r.Context())
 	if err != nil {
@@ -54,7 +58,10 @@ func (h *Handler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 	const fn = "handlers.user.GetUserByEmail"
 
-	log := h.log.With(slog.String("fn", fn), slog.String("request_id", middleware.GetReqID(r.Context())))
+	log := h.log.With(
+		slog.String("fn", fn),
+		slog.String("request_id", middleware.GetReqID(r.Context())),
+	)
 
 	email := chi.URLParam(r, "email")
 	if email == "" {
@@ -80,9 +87,7 @@ func (h *Handler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.storage.GetUserByEmail(r.Context(), email)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			log.Error("User not found", slog.Any("error", err))
-
+		if errors.Is(err, storage.ErrNotFound) || strings.Contains(strings.ToLower(err.Error()), "not found") {
 			render.Status(r, http.StatusNotFound)
 			render.JSON(w, r, map[string]string{
 				"error":   "Not found",
@@ -92,7 +97,6 @@ func (h *Handler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Error("Failed to get user by email", slog.Any("error", err))
-
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, map[string]string{
 			"error":   "Internal server error",
@@ -113,7 +117,10 @@ func (h *Handler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	const fn = "handlers.user.CreateUser"
 
-	log := h.log.With(slog.String("fn", fn), slog.String("request_id", middleware.GetReqID(r.Context())))
+	log := h.log.With(
+		slog.String("fn", fn),
+		slog.String("request_id", middleware.GetReqID(r.Context())),
+	)
 
 	log.Info("Creating new user", slog.String("url", r.URL.String()))
 
@@ -148,22 +155,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addr, err := mail.ParseAddress(user.Email)
-	if err != nil || addr.Address != user.Email {
-		log.Error("invalid email format",
-			slog.Any("error", err),
-			slog.String("email", user.Email),
-		)
-
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, map[string]string{
-			"error":   "Bad request",
-			"message": "Invalid email format",
-		})
-		return
-	}
-
-	err = h.storage.CreateUser(r.Context(), user)
+	err := h.storage.CreateUser(r.Context(), user)
 	if err != nil {
 		log.Error("Failed to create user", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -180,9 +172,10 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		slog.String("url", r.URL.String()),
 	)
 
-	render.Status(r, http.StatusCreated)
+	w.WriteHeader(http.StatusCreated)
 	render.JSON(w, r, map[string]interface{}{
 		"status": "User created successfully",
+		"id":     user.ID,
 		"user":   user,
 	})
 }
