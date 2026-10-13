@@ -10,6 +10,7 @@ import (
 	"PETshop/internal/handlers/checkout"
 	"PETshop/internal/lib/logger"
 	"PETshop/internal/storage/postgres"
+	"PETshop/internal/handlers/analytic"
 	"log/slog"
 	"net/http"
 	"os"
@@ -58,13 +59,16 @@ func main() {
 	orderHandler := order.New(log, storage)
 	orderItemHandler := order.NewItem(log, storage)
 	checkoutHandler := checkout.New(log, storage)
+	analyticsHandler := analytic.New(log, storage)
 	router.Get("/health", handlers.StatusHandler)
 	router.Get("/products", productHandler.GetAllProducts)
+	router.Get("/products/popular", analyticsHandler.GetPopularProducts)
 	router.Get("/products/{id}", productHandler.GetProductByID)
-	router.Get("/orders/{id}", orderHandler.GetOrderByID)
 	router.Get("/users/orders", orderHandler.GetOrdersByUserEmail)
+	router.Get("/users/history", analyticsHandler.GetUserOrderHistory)
 	router.Get("/users/{email}", userHandler.GetUserByEmail)
 	router.Get("/users", userHandler.GetAllUsers)
+	router.Get("/orders/{id}", orderHandler.GetOrderByID)
 	router.Get("/orders/{id}/items", orderItemHandler.GetOrderItemsByOrderID)
 	router.Delete("/products/{id}", productHandler.DeleteProduct)
 	router.Put("/products/{id}", productHandler.UpdateProduct)
@@ -73,6 +77,7 @@ func main() {
 	router.Post("/orders", orderHandler.CreateOrder)
 	router.Post("/orders/{id}/items", orderItemHandler.AddOrderItem)
 	router.Post("/checkout", checkoutHandler.PlaceOrder)
+
 
 	// Settings and started server
 	srv := &http.Server{

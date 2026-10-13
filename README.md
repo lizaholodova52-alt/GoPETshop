@@ -1,86 +1,123 @@
-## Релиз v2 — Заказы и товарные позиции
+# V4 — Аналитика
 
-Реализовано оформление заказов и привязка к ним списка товаров.
+Добавлены аналитические SQL-запросы с использованием `JOIN`, `GROUP BY` и `SUM`.
 
----
+История заказов пользователя:
 
-### Заказы (Orders)
-
-- Создание заказа (`total_price` изначально равен `0`).
-- Получение заказа по `ID`.
-- Получение всех заказов пользователя по `email`.
-- Валидация входных данных и возврат ошибок `400`, `404`, `500`.
-
-**Storage:**
-```go
-CreateOrder(order models.Order) (int, error)
-GetOrderByID(id int) (models.Order, error)
-GetOrdersByUserEmail(email string) ([]models.Order, error)
+```text
+GET /users/history?email=alice@example.com
 ```
 
-**HTTP endpoints:**
-- `POST /orders` — создание заказа
-- `GET /orders/{id}` — получение по ID
-- `GET /users/orders?email=...` — заказы пользователя
+Возвращает информацию о заказах пользователя, включая:
 
----
+- ID заказа;
+- товар;
+- количество;
+- итоговую стоимость заказа;
+- статус транзакции;
+- дату создания.
 
-### Позиции заказа (Order Items)
+Популярные товары:
 
-- Добавление товара в заказ и получение всех позиций заказа.
-- Проверка `product_id` и `quantity`.
-- Извлечение `order_id` из path-параметров URL.
-- Автоматический пересчет итоговой стоимости через `UpdateOrderTotalPrice(orderID int) error`.
-
-**Storage:**
-```go
-AddOrderItem(orderItem models.OrderItem) error
-GetOrderItemsByOrderID(orderID int) ([]models.OrderItem, error)
-UpdateOrderTotalPrice(orderID int) error
+```text
+GET /products/popular
 ```
 
-**HTTP endpoints:**
-- `POST /orders/{id}/items` — добавить позицию
-- `GET /orders/{id}/items` — список позиций
+## API
 
-**Пример запроса (`POST /orders/1/items`):**
-```json
-{
-  "ProductID": 1,
-  "Quantity": 2
-}
+### Пользователи
+
+```text
+POST /users
+GET  /users
+GET  /users/{email}
+GET  /users/orders?email=alice@example.com
+GET  /users/history?email=alice@example.com
 ```
 
----
+### Товары
 
-### Расчет стоимости
+```text
+POST   /products
+GET    /products
+GET    /products/{id}
+PUT    /products/{id}
+DELETE /products/{id}
+GET    /products/popular
+```
 
-Итоговая сумма вычисляется в БД через единый SQL-запрос (`JOIN`, `SUM`, `COALESCE`):
+### Заказы
 
-$$\text{product.price} \times \text{order\_items.quantity}$$
+```text
+POST /orders
+GET  /orders/{id}
 
-Если позиций в заказе нет, сумма равна 0.
+POST /orders/{id}/items
+GET  /orders/{id}/items
+```
 
----
+### Checkout
 
-### Ключевые темы в v2
+```text
+POST /checkout
+```
 
-- Связи «один-ко-многим», внешние ключи (`FOREIGN KEY`) и SQL `JOIN`.
-- Чтение query- и path-параметров в HTTP.
-- Разграничение ошибок `400`, `404`, `500`.
-- Юнит-тестирование хэндлеров с изолированными моками.
+### Проверка состояния приложения
 
----
+```text
+GET /health
+```
 
-### Команды
+## Переменные окружения
+
+Создайте файл `.env` на основе `.env.example`.
+
+Пример:
+
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=postgres
+DB_HOST=postgres
+DB_PORT=5432
+```
+
+## Запуск через Docker
+
+Запуск проекта:
 
 ```bash
-# Тесты и качество кода
-go test ./...
-golangci-lint run ./...
-go fmt ./...
-
-# Запуск
-go mod tidy
 docker compose up --build
+```
+
+Остановка проекта:
+
+```bash
+docker compose down
+```
+
+Остановка проекта с удалением volume базы данных:
+
+```bash
+docker compose down -v
+```
+
+## Тесты
+
+Запуск всех тестов:
+
+```bash
+go test ./...
+```
+
+## Линтер
+
+```bash
+golangci-lint run ./...
+```
+
+## Форматирование
+
+```bash
+go fmt ./...
 ```
