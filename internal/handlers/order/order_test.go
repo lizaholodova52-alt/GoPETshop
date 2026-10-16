@@ -276,9 +276,13 @@ func TestGetOrdersByUserEmail_Success(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodGet,
-		"/users/orders?email=alice@example.com",
+		"/users/alice@example.com/orders",
 		nil,
 	)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "alice@example.com")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
 	handler := New(slog.Default(), mock)
@@ -313,6 +317,10 @@ func TestGetOrdersByUserEmail_InvalidEmail(t *testing.T) {
 		nil,
 	)
 
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "invalid-email")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
 	w := httptest.NewRecorder()
 
 	handler := New(slog.Default(), &OrderMock{})
@@ -332,9 +340,13 @@ func TestGetOrdersByUserEmail_Fail(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodGet,
-		"/users/orders?email=alice@example.com",
+		"/users/alice@example.com/orders",
 		nil,
 	)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "alice@example.com")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
 

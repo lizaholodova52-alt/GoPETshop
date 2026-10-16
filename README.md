@@ -21,7 +21,7 @@ GetOrdersByUserEmail(email string) ([]models.Order, error)
 **HTTP endpoints:**
 - `POST /orders` — создание заказа
 - `GET /orders/{id}` — получение по ID
-- `GET /users/orders?email=...` — заказы пользователя
+- `GET /users/{email}/orders` — заказы пользователя
 
 ---
 

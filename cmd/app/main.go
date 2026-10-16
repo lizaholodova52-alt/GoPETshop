@@ -60,7 +60,7 @@ func main() {
 	router.Get("/products", productHandler.GetAllProducts)
 	router.Get("/products/{id}", productHandler.GetProductByID)
 	router.Get("/orders/{id}", orderHandler.GetOrderByID)
-	router.Get("/users/orders", orderHandler.GetOrdersByUserEmail)
+	router.Get("/users/{email}/orders", orderHandler.GetOrdersByUserEmail)
 	router.Get("/users/{email}", userHandler.GetUserByEmail)
 	router.Get("/users", userHandler.GetAllUsers)
 	router.Get("/orders/{id}/items", orderItemHandler.GetOrderItemsByOrderID)
