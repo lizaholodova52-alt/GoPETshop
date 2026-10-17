@@ -95,6 +95,29 @@ func TestCreateOrder_Fail(t *testing.T) {
 	}
 }
 
+func TestCreateOrder_UserNotFound(t *testing.T) {
+	mock := &OrderMock{
+		CreateOrderFunc: func(ctx context.Context, order models.Order) (int, error) {
+			return 0, storage.ErrNotFound
+		},
+	}
+
+	body := `{
+		"CustomerID": 1,
+		"TotalPrice": 99.99
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/orders", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	handler := New(slog.Default(), mock)
+	handler.CreateOrder(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", w.Code)
+	}
+}
+
 // =======================
 // Get Order By ID
 // =======================
@@ -246,7 +269,11 @@ func TestGetOrdersByUserEmail_Success(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/users/orders?email=alice@example.com", nil)
+	req := httptest.NewRequest(http.MethodGet, "/users/alice@example.com/orders", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "alice@example.com")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
 	handler := New(slog.Default(), mock)
@@ -270,7 +297,11 @@ func TestGetOrdersByUserEmail_EmptyEmail(t *testing.T) {
 }
 
 func TestGetOrdersByUserEmail_InvalidEmail(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/users/orders?email=invalid-email", nil)
+	req := httptest.NewRequest(http.MethodGet, "/users/invalid-email/orders", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "invalid-email")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
 	handler := New(slog.Default(), &OrderMock{})
@@ -288,7 +319,11 @@ func TestGetOrdersByUserEmail_Fail(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/users/orders?email=alice@example.com", nil)
+	req := httptest.NewRequest(http.MethodGet, "/users/alice@example.com/orders", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "alice@example.com")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
 	handler := New(slog.Default(), mock)

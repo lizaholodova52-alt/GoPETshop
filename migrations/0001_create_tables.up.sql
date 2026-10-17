@@ -10,8 +10,6 @@ CREATE TABLE products (
     price NUMERIC NOT NULL,
     stock INT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_orders_user_id
-ON orders(user_id);
 
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
@@ -19,6 +17,8 @@ CREATE TABLE orders (
     total_price NUMERIC NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_orders_user_id
+ON orders(user_id);
 
 CREATE TABLE order_items (
     id SERIAL PRIMARY KEY,
