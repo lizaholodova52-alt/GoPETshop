@@ -66,6 +66,16 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	orderID, err := h.storage.CreateOrder(r.Context(), order)
 	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+    		log.Error("user not found", slog.Int("customer_id", order.CustomerID))
+
+    		w.WriteHeader(http.StatusNotFound)
+    		render.JSON(w, r, map[string]string{
+        		"error":   "Not found",
+        		"message": "User not found",
+    		})
+    		return
+		}
 		log.Error("failed to create order", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		render.JSON(w, r, map[string]string{
@@ -166,7 +176,7 @@ func (h *Handler) GetOrdersByUserEmail(w http.ResponseWriter, r *http.Request) {
 		slog.String("request_id", middleware.GetReqID(r.Context())),
 	)
 
-	email := r.URL.Query().Get("email")
+	email := chi.URLParam(r, "email")
 	if email == "" {
 		log.Error("Email parameter is missing")
 		w.WriteHeader(http.StatusBadRequest)

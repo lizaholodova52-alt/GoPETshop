@@ -8,7 +8,7 @@ import (
 
 	"PETshop/internal/models"
 	"github.com/go-chi/chi/middleware"
-
+	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 )
 
@@ -39,7 +39,7 @@ func (h *Handler) GetUserOrderHistory(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("getting user order history", slog.String("url", r.URL.String()))
 
-	email := r.URL.Query().Get("email")
+	email := chi.URLParam(r, "email")
 	if email == "" {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, map[string]string{

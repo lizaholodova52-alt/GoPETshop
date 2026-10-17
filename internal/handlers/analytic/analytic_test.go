@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi"
 	"PETshop/internal/models"
 )
 
@@ -29,14 +30,13 @@ func TestGetUserOrderHistory_Success(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(
-		http.MethodGet,
-		"/users/history?email=alice@example.com",
-		nil,
-	)
+	req := httptest.NewRequest(http.MethodGet, "/users/alice@example.com/history", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "alice@example.com")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
-
 	handler := New(slog.Default(), mock)
 	handler.GetUserOrderHistory(w, req)
 
@@ -46,14 +46,9 @@ func TestGetUserOrderHistory_Success(t *testing.T) {
 }
 
 func TestGetUserOrderHistory_EmptyEmail(t *testing.T) {
-	req := httptest.NewRequest(
-		http.MethodGet,
-		"/users/history",
-		nil,
-	)
+	req := httptest.NewRequest(http.MethodGet, "/users/history", nil)
 
 	w := httptest.NewRecorder()
-
 	handler := New(slog.Default(), &AnalyticsMock{})
 	handler.GetUserOrderHistory(w, req)
 
@@ -63,14 +58,13 @@ func TestGetUserOrderHistory_EmptyEmail(t *testing.T) {
 }
 
 func TestGetUserOrderHistory_InvalidEmail(t *testing.T) {
-	req := httptest.NewRequest(
-		http.MethodGet,
-		"/users/history?email=invalid-email",
-		nil,
-	)
+	req := httptest.NewRequest(http.MethodGet, "/users/invalid-email/history", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "invalid-email")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
-
 	handler := New(slog.Default(), &AnalyticsMock{})
 	handler.GetUserOrderHistory(w, req)
 
@@ -86,14 +80,13 @@ func TestGetUserOrderHistory_Fail(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(
-		http.MethodGet,
-		"/users/history?email=alice@example.com",
-		nil,
-	)
+	req := httptest.NewRequest(http.MethodGet, "/users/alice@example.com/history", nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("email", "alice@example.com")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	w := httptest.NewRecorder()
-
 	handler := New(slog.Default(), mock)
 	handler.GetUserOrderHistory(w, req)
 
@@ -115,14 +108,9 @@ func TestGetPopularProducts_Success(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(
-		http.MethodGet,
-		"/products/popular",
-		nil,
-	)
+	req := httptest.NewRequest(http.MethodGet, "/products/popular", nil)
 
 	w := httptest.NewRecorder()
-
 	handler := New(slog.Default(), mock)
 	handler.GetPopularProducts(w, req)
 
@@ -138,14 +126,9 @@ func TestGetPopularProducts_Fail(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(
-		http.MethodGet,
-		"/products/popular",
-		nil,
-	)
+	req := httptest.NewRequest(http.MethodGet, "/products/popular", nil)
 
 	w := httptest.NewRecorder()
-
 	handler := New(slog.Default(), mock)
 	handler.GetPopularProducts(w, req)
 
